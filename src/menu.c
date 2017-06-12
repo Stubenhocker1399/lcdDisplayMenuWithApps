@@ -213,6 +213,53 @@ int main(int argc, char **argv) {
 			
 		}free(binFolderList);
 	}
+	enum states {
+		top,
+		bottom
+	};
 
+	arg_struct args = { .running = 0,.fd = fd,.encoder = encoder };
+	int currentTopApp = basicAppsn-1;
+
+	args.running = 1;
+	void* appLibaryHandle = LoadSharedLib(basicApps[currentTopApp].libPath);
+	pthread_t appThread = runApp(appLibaryHandle, &args);
+	int lastEncoderValue = encoder->value/4;
+	enum states state = top;
+	while (1) {
+		switch (state)
+		{
+		case top:
+			if (encoder->value/ENCODER_SUB_STEPS != lastEncoderValue)
+			{
+				args.running = 0;
+				if (pthread_join(appThread, NULL)) {
+
+					fprintf(stderr, "Error joining thread.\n");
+					return 2;
+				}
+				UnloadSharedLib(appLibaryHandle);
+				currentTopApp--;
+				if (currentTopApp < 0) {
+					currentTopApp = basicAppsn - 1;
+				}
+				puts(basicApps[currentTopApp].appname);
+					
+				appLibaryHandle = LoadSharedLib(basicApps[currentTopApp].libPath);
+				appThread = runApp(appLibaryHandle, &args);
+				args.running = 1;
+				lastEncoderValue = encoder->value / ENCODER_SUB_STEPS;
+			}			
+			break;
+		case bottom:
+			//todo menu
+			break;
+		default:
+			fprintf(stderr, "Invalid menu state: %i\n", state);
+			break;
+		}
+		delay(1);
+	}
+	
 	return 0;
 }

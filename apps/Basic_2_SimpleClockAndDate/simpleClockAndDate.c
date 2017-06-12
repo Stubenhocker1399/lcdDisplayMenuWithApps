@@ -7,7 +7,7 @@
 
 appInfo getAppInfo() {
 	appInfo appinfo;
-	appinfo.name = "Hello world";
+	appinfo.name = "Simple Clock and Date";
 	appinfo.app_type = basic;
 	return appinfo;
 }
