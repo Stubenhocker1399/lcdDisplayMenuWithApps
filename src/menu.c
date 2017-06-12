@@ -239,9 +239,17 @@ int main(int argc, char **argv) {
 					return 2;
 				}
 				UnloadSharedLib(appLibaryHandle);
-				currentTopApp--;
-				if (currentTopApp < 0) {
-					currentTopApp = basicAppsn - 1;
+				if (encoder->value / ENCODER_SUB_STEPS > lastEncoderValue) {
+					currentTopApp--;
+					if (currentTopApp < 0) {
+						currentTopApp = basicAppsn - 1;
+					}
+				}
+				else {
+					currentTopApp++;
+					if (currentTopApp > basicAppsn - 1) {
+						currentTopApp = 0;
+					}
 				}
 				puts(basicApps[currentTopApp].appname);
 					
