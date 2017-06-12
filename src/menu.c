@@ -214,33 +214,5 @@ int main(int argc, char **argv) {
 		}free(binFolderList);
 	}
 
-	int i = basicAppsn;
-	for (--i; i >= 0; i--) {
-		void* appLibaryHandle = LoadSharedLib(basicApps[i].libPath);
-		arg_struct args = { .running = 1,.fd = fd,.encoder = encoder };
-		pthread_t appThread = runApp(appLibaryHandle, &args);
-		sleep(10);
-		args.running = 0;
-		if (pthread_join(appThread, NULL)) {
-
-			fprintf(stderr, "Error joining thread.\n");
-			return 2;
-		}
-		UnloadSharedLib(appLibaryHandle);
-	}
-	i = menuAppsn;
-	for (--i; i >= 0; i--) {
-		void* appLibaryHandle = LoadSharedLib(menuApps[i].libPath);
-		arg_struct args = { .running = 1,.fd = fd,.encoder = encoder };
-		pthread_t appThread = runApp(appLibaryHandle, &args);
-		sleep(10);
-		args.running = 0;
-		if (pthread_join(appThread, NULL)) {
-
-			fprintf(stderr, "Error joining thread.\n");
-			return 2;
-		}
-		UnloadSharedLib(appLibaryHandle);
-	}
 	return 0;
 }
