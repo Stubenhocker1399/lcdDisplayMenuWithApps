@@ -66,50 +66,46 @@ void* loadSharedLibFromFolder(char *folder) {
 	strcat(libName, folder);
 	strcat(libName, ".so");
 	void* moduleHandleLoop = LoadSharedLib(libName);
+	if (moduleHandleLoop == NULL) {
+		fprintf(stderr, "Could not load shared libary of app folder '%s'.\n", folder);
+	}
 	return moduleHandleLoop;
 }
 
-appInfo getAppInfo(char *folder) {
+appInfo getAppInfo(void* appLibaryHandle) {
 	appInfo appinfo;
 	appinfo.app_type = 0;
 	appinfo.name = "NoName";
-	void* moduleHandleLoop = loadSharedLibFromFolder(folder);
-	if (moduleHandleLoop == NULL) {
-		fprintf(stderr, "Could not load shared libary of app folder '%s'.\n", folder);
+	if (appLibaryHandle == NULL) {
 		appinfo.app_type = -1;
 		appinfo.name = "invalidAppFolder";
 		return appinfo;
 	}
 	ModuleAppInfo appInfoFunc;
-	appInfoFunc = LoadFunction(moduleHandleLoop, "getAppInfo");
+	appInfoFunc = LoadFunction(appLibaryHandle, "getAppInfo");
 	if (appInfoFunc == NULL) {
-		fprintf(stderr, "Could not get app info of app folder '%s'.\n", folder);
+		fprintf(stderr, "Could not get app info of app.\n");
 		appinfo.app_type = -1;
 		appinfo.name = "invalidAppCodeGetAppInfo";
-		//UnloadSharedLib(moduleHandleLoop);
 		return appinfo;
 	}
 	appinfo = appInfoFunc();
 
-	//UnloadSharedLib(moduleHandleLoop);
-	printf("Alive\n");
 	return appinfo;
 }
 
-pthread_t runApp(char *folder, arg_struct* args) {
-	void* moduleHandleLoop = loadSharedLibFromFolder(folder);
+pthread_t runApp(void* appLibaryHandle, arg_struct* args) {
 	ModuleMainFuncLoop appMain;
-	appMain = LoadFunction(moduleHandleLoop, "appMain");
+	appMain = LoadFunction(appLibaryHandle, "appMain");
 	if (appMain == NULL) {
-		fprintf(stderr, "Could not get app main of app folder '%s'.\n", folder);
+		fprintf(stderr, "Could not get app main.\n");
 	}
 	pthread_t appThread;
 	if (pthread_create(&appThread, NULL, appMain, &*args)) {
-		fprintf(stderr, "Error creating thread\n");
+		fprintf(stderr, "Error creating thread.\n");
 	}
 
 	return appThread;
-	//UnloadSharedLib(moduleHandleLoop);
 }
 
 int main(int argc, char **argv) {
@@ -125,30 +121,24 @@ int main(int argc, char **argv) {
 			if (argc != 0)
 				strcat(appFolderName, " ");
 		}
+		void* appLibaryHandle = loadSharedLibFromFolder(appFolderName);
 		printf("Trying to load app folder '%s' directly.\n", appFolderName);
-		printf("Alive-1\n");
-		appInfo appinfo = getAppInfo(appFolderName);
-		printf("Alive1\n");
-		printf("App '%s'\n", appinfo.name);
+		appInfo appinfo = getAppInfo(appLibaryHandle);
 		if (appinfo.app_type == -1) {
 			fprintf(stderr, "Error getting app info.\n");
 			return 3;
 		}
-		arg_struct args;
-		args.running = 1;
-		args.fd = fd;
-		args.encoder = encoder;
-		printf("Running: %i\n", args.running);
-		pthread_t appThread = runApp(appFolderName, &args);
-		sleep(2);
+		arg_struct args = { .running = 1, .fd = fd, .encoder = encoder };
+		pthread_t appThread = runApp(appLibaryHandle, &args);
+		sleep(10);
 		args.running = 0;
-		printf("Running: %i\n", args.running);
 		if (pthread_join(appThread, NULL)) {
 
-			fprintf(stderr, "Error joining thread\n");
+			fprintf(stderr, "Error joining thread.\n");
 			return 2;
 
 		}
+		UnloadSharedLib(appLibaryHandle);
 		lcdClear(fd);
 		lcdPosition(fd, 8-(7/2), 0);
 		lcdPuts(fd, "Program");
@@ -189,10 +179,7 @@ int main(int argc, char **argv) {
 	printf(loadedAppInfo.name);
 
 	pthread_t appThread;
-	arg_struct args;
-	args.running = 1;
-	args.fd = fd;
-	args.encoder = encoder;
+	arg_struct args = { .running = 1,.fd = fd,.encoder = encoder };
 		if (pthread_create(&appThread, NULL, appMain, &args)) {
 		fprintf(stderr, "Error creating thread\n");
 		return 1;
@@ -201,7 +188,6 @@ int main(int argc, char **argv) {
 	sleep(5);
 	printf("Attempt to stop app func loop by setting running argument to false.\n");
 	args.running = 0;
-	//args.running = 0;
 	if (pthread_join(appThread, NULL)) {
 
 		fprintf(stderr, "Error joining thread\n");
