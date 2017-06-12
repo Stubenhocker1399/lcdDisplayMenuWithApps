@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
 	printf(loadedAppInfo.name);
 
 	pthread_t appThread;
-	arg_struct args = { .running = 1,.fd = fd,.encoder = encoder };
+	arg_struct args = { .running = 1, .fd = fd, .encoder = encoder };
 		if (pthread_create(&appThread, NULL, appMain, &args)) {
 		fprintf(stderr, "Error creating thread\n");
 		return 1;
