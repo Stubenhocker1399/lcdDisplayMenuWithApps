@@ -4,6 +4,7 @@
 #define ENCODER_A 4
 #define ENCODER_B 17
 #define MAX_FOLDER_NAME_LENGTH 50
+#define MAX_APPS_PER_CATEGORY 10
 
 typedef struct{
 	volatile int running;

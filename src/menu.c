@@ -8,6 +8,8 @@
 #include <pthread.h>
 #include "../shared/shared.h"
 #include <string.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 void* LoadSharedLib(const char* path)
 {
@@ -158,43 +160,70 @@ int main(int argc, char **argv) {
 		printf("Exiting.\n");
 		return 0;
 	}
-	void* moduleHandle = LoadSharedLib("./libShell_1_HelloWorld.so");
-	ModuleMainFunc foo;
-	foo = LoadFunction(moduleHandle, "appMain");	
-	foo();
-	UnloadSharedLib(moduleHandle);
+	typedef struct {
+		char libPath[MAX_FOLDER_NAME_LENGTH];
+		char appname[MAX_FOLDER_NAME_LENGTH];
+	}libInfo;
 
-	
+	libInfo shellApps[MAX_APPS_PER_CATEGORY];
+	int shellAppsn = 0;
+	libInfo basicApps[MAX_APPS_PER_CATEGORY];
+	int basicAppsn = 0;
+	libInfo menuApps[MAX_APPS_PER_CATEGORY];
+	int menuAppsn = 0;
 
-
-	void* moduleHandleLoop = LoadSharedLib("./libBasic_1_HelloWorldDisplayLoop.so");
-	ModuleMainFuncLoop appMain;
-	appMain = LoadFunction(moduleHandleLoop, "appMain");
-	
-	ModuleAppInfo appInfoFunc;
-	appInfoFunc = LoadFunction(moduleHandleLoop, "getAppInfo");
-
-	appInfo loadedAppInfo = appInfoFunc();
-
-	printf(loadedAppInfo.name);
-
-	pthread_t appThread;
-	arg_struct args = { .running = 1, .fd = fd, .encoder = encoder };
-		if (pthread_create(&appThread, NULL, appMain, &args)) {
-		fprintf(stderr, "Error creating thread\n");
-		return 1;
+	struct dirent **binFolderList;
+	int n;		
+	n = scandir("./", &binFolderList, 0, alphasort);
+	if (n < 0)
+		perror("scandir");
+	else {
+		while (n--) {
+			if (!(!strcmp(binFolderList[n]->d_name, ".") || !strcmp(binFolderList[n]->d_name, "..") || !strcmp(binFolderList[n]->d_name, "lcdMenu"))) {
+				char libPath[MAX_FOLDER_NAME_LENGTH];
+				strcpy(libPath, "./");
+				strcat(libPath, binFolderList[n]->d_name);
+				void* appLibaryHandle = LoadSharedLib(libPath);
+				appInfo appinfo = getAppInfo(appLibaryHandle);
+				if (appinfo.app_type == -1) {
+					fprintf(stderr, "%s: Error getting app info.\n", libPath);
+					return 3;
+				}
+				printf("%s: Found app '%s' of type %i.\n", libPath, appinfo.name, appinfo.app_type);
+				switch (appinfo.app_type)
+				{
+				case shell:
+					strcpy(shellApps[shellAppsn].libPath,libPath);	
+					strcpy(shellApps[shellAppsn++].appname, appinfo.name);
+					break;
+				case basic:
+					strcpy(basicApps[basicAppsn].libPath, libPath);
+					strcpy(basicApps[basicAppsn++].appname, appinfo.name);
+					break;
+				case menu:
+					strcpy(menuApps[menuAppsn].libPath, libPath);
+					strcpy(menuApps[menuAppsn++].appname, appinfo.name);
+					break;
+				default:
+					fprintf(stderr, "%s: Error reading app_type, unexpected number: %i\n", appinfo.app_type);
+					break;
+				}
+				UnloadSharedLib(appLibaryHandle); 
+				
+			}free(binFolderList[n]);
+			
+		}free(binFolderList);
 	}
-	printf("Sleeping a bit\n");
-	sleep(5);
-	printf("Attempt to stop app func loop by setting running argument to false.\n");
-	args.running = 0;
-	if (pthread_join(appThread, NULL)) {
-
-		fprintf(stderr, "Error joining thread\n");
-		return 2;
-
+	/*
+	for (--basicAppsn; basicAppsn >= 0; basicAppsn--) {
+		printf("i: %i loadedapps %s\n", basicAppsn, basicApps[basicAppsn].appname);
 	}
-	printf("Joined threads.\n");
-	UnloadSharedLib(moduleHandleLoop);
+	for (--shellAppsn; shellAppsn >= 0; shellAppsn--) {
+		printf("loadedapps %s\n", shellApps[shellAppsn].appname);
+	}
+	for (--menuAppsn; menuAppsn >= 0; menuAppsn--) {
+		printf("loadedapps %s\n", menuApps[menuAppsn].appname);
+	}
+	*/
 	return 0;
 }
