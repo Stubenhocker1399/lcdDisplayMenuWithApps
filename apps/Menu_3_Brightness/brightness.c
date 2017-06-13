@@ -10,7 +10,7 @@
 
 appInfo getAppInfo() {
 	appInfo appinfo;
-	appinfo.name = "Music Volume";
+	appinfo.name = "Brightness";
 	appinfo.app_type = menu;
 	return appinfo;
 }

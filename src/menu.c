@@ -215,13 +215,15 @@ int main(int argc, char **argv) {
 	}
 	enum states {
 		top,
-		bottom
+		bottom,
+		menuapp
 	};
 
 	arg_struct args = { .running = 0,.fd = fd,.encoder = encoder };
 	int currentTopApp = basicAppsn-1;
 	int pointerPos = 7;
 	int offset = 0;
+	char menuString[MAX_FOLDER_NAME_LENGTH * MAX_APPS_PER_CATEGORY * 3];
 
 	args.running = 1;
 	void* appLibaryHandle = LoadSharedLib(basicApps[currentTopApp].libPath);
@@ -262,6 +264,11 @@ int main(int argc, char **argv) {
 			}
 			changedState = 0;
 			if (digitalRead(BUTTON_A) == LOW) {
+				usleep(10000);
+				while (digitalRead(BUTTON_A) == LOW) {
+					usleep(5000);
+				}
+				usleep(10000);
 				state = bottom;
 				changedState = 1;
 				args.running = 0;
@@ -285,16 +292,24 @@ int main(int argc, char **argv) {
 				lcdCharDef(fd, 8, pointerArrow);
 			}
 			break;
-		case bottom:;
-			//todo menu
+		case bottom:
+			if (changedState) {
+				int i = menuAppsn;
+				for (--i; i >= 0; i--) {
+					if (i == menuAppsn - 1)
+						strcpy(menuString, menuApps[i].appname);
+					else
+						strcat(menuString, menuApps[i].appname);
+					if(i!=0)
+						strcat(menuString, "   ");				
+				}
+			}
 			if (encoder->value  != lastEncoderValue || changedState) {
-				char exampleMenu[46];
-				strcpy(exampleMenu, "Music Volume   Media Control   Brightness");
 				lcdClear(fd);
 				int i;
 				for(i=0;i<16;i++){
-					if(i+offset>=0 && i+offset<strlen(exampleMenu))
-						lcdPutchar(fd, exampleMenu[i+offset]);
+					if(i+offset>=0 && i+offset<strlen(menuString))
+						lcdPutchar(fd, menuString[i+offset]);
 				}
 				if (encoder->value > lastEncoderValue) {
 					pointerPos++;
@@ -303,8 +318,8 @@ int main(int argc, char **argv) {
 						pointerPos--;
 						offset++;
 					}
-					if (offset > strlen(exampleMenu)-16) {
-						offset = strlen(exampleMenu)-16;
+					if (offset > strlen(menuString)-16) {
+						offset = strlen(menuString)-16;
 					}
 				}
 				else {
@@ -330,6 +345,53 @@ int main(int argc, char **argv) {
 				lastEncoderValue = encoder->value / ENCODER_SUB_STEPS;
 				state = top;
 			}
+			if (digitalRead(BUTTON_A) == LOW) {
+				usleep(10000);
+				while (digitalRead(BUTTON_A) == LOW){
+					usleep(5000);
+				}
+				usleep(10000);
+				//figure out selected app
+				char menuString[MAX_FOLDER_NAME_LENGTH * MAX_APPS_PER_CATEGORY * 3];
+
+				int i = menuAppsn;
+				for (--i; i >= 0; i--) {
+					if (i == menuAppsn - 1)
+						strcpy(menuString, menuApps[i].appname);
+					else
+						strcat(menuString, menuApps[i].appname);
+					if (i != 0)
+						strcat(menuString, "   ");
+					if (offset + pointerPos < strlen(menuString))
+						break;
+				}
+				int selectedApp = i;
+				args.running = 1;
+				appLibaryHandle = LoadSharedLib(menuApps[selectedApp].libPath);
+				appThread = runApp(appLibaryHandle, &args);
+				lastEncoderValue = encoder->value / ENCODER_SUB_STEPS;
+				state = menuapp;
+				changedState = 1;
+			}
+			break;
+		case menuapp:
+			while (args.running){
+				usleep(10000);
+			}
+			if (pthread_join(appThread, NULL)) {
+
+				fprintf(stderr, "Error joining thread.\n");
+				return 2;
+			}
+			while (digitalRead(BUTTON_A) == LOW) {
+				usleep(5000);
+			}
+			while (digitalRead(BUTTON_B) == LOW) {
+				usleep(5000);
+			}
+			UnloadSharedLib(appLibaryHandle);
+			changedState = 1;
+			state = bottom;
 			break;
 		default:
 			fprintf(stderr, "Invalid menu state: %i\n", state);

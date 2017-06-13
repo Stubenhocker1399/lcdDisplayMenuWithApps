@@ -76,17 +76,16 @@ void appMain(arg_struct* args) {
 			lastState = HIGH;
 		}
 		else if (lastState == HIGH && digitalRead(BUTTON_A) == LOW) {
-			//			printf("read BUTTON_A\n");
-			lcdPutchar(args->fd, (char)0);
+			//lcdPutchar(args->fd, (char)0);
 			lastState = LOW;
 		}
 		if (digitalRead(BUTTON_B) == HIGH && lastState2 == LOW) {
 			lastState2 = HIGH;
 		}
 		else if (lastState2 == HIGH && digitalRead(BUTTON_B) == LOW) {
-			lcdPutchar(args->fd, (char)2);
+			//lcdPutchar(args->fd, (char)2);
 			lastState2 = LOW;
-			//			printf("read BUTTON_B\n");
+			args->running = 0;
 		}
 
 		if (args->encoder->value != lastValue) {
