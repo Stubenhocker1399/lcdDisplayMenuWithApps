@@ -102,7 +102,7 @@ void appMain(arg_struct* args) {
 			case 0:sendCommand("play\n"); break;
 			case 1:sendCommand("next\n"); break;
 			case 2:sendCommand("prev\n"); break;
-			case 3:args->running = 0; break;
+			case 3:sendCommand("switch\n"); break;
 			}
 
 		}
@@ -110,7 +110,7 @@ void appMain(arg_struct* args) {
 			lastState2 = HIGH;
 		}
 		else if (lastState2 == HIGH && digitalRead(BUTTON_B) == LOW) {
-			lcdPutchar(args->fd, (char)1);
+			args->running = 0,
 			lastState2 = LOW;
 		}
 		if (args->encoder->value / 16 % 4 != lastValue) {
@@ -132,8 +132,8 @@ void appMain(arg_struct* args) {
 				lcdPuts(args->fd, "Previous");
 				break;
 			case 3:
-				lcdPosition(args->fd, 6, 0);
-				lcdPuts(args->fd, "Back");
+				lcdPosition(args->fd, 1, 0);
+				lcdPuts(args->fd, "Switch Output");
 				break;
 			default:
 				break;
