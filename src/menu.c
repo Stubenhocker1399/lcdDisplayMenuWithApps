@@ -303,9 +303,12 @@ int main(int argc, char **argv) {
 					if(i!=0)
 						strcat(menuString, "   ");				
 				}
+				lcdClear(fd);
 			}
 			if (encoder->value  != lastEncoderValue || changedState) {
-				lcdClear(fd);
+				lcdPosition(fd, pointerPos, 1);
+				lcdPutchar(fd, (char)254);//blank out cursor
+				lcdPosition(fd, 0, 0);
 				int i;
 				for(i=0;i<16;i++){
 					if(i+offset>=0 && i+offset<strlen(menuString))
@@ -392,6 +395,17 @@ int main(int argc, char **argv) {
 			UnloadSharedLib(appLibaryHandle);
 			changedState = 1;
 			state = bottom;
+			static unsigned char pointerArrow[8] = {
+				0b00100,
+				0b01010,
+				0b10001,
+				0b00000,
+				0b01110,
+				0b10001,
+				0b10001,
+				0b00000,
+			};
+			lcdCharDef(fd, 8, pointerArrow);
 			break;
 		default:
 			fprintf(stderr, "Invalid menu state: %i\n", state);
