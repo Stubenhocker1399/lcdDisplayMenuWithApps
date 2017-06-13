@@ -10,6 +10,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <signal.h>
 
 void* LoadSharedLib(const char* path)
 {
@@ -110,7 +111,14 @@ pthread_t runApp(void* appLibaryHandle, arg_struct* args) {
 	return appThread;
 }
 
+static volatile mainRunning = 1;
+
+void stopMainRunning(int handler) {
+	mainRunning = 0;
+}
+
 int main(int argc, char **argv) {
+	signal(SIGINT, stopMainRunning);
 	int fd = initHardware();
 	struct encoder *encoder = setupencoder(ENCODER_A, ENCODER_B);
 
@@ -231,7 +239,7 @@ int main(int argc, char **argv) {
 	int lastEncoderValue = encoder->value / ENCODER_SUB_STEPS;
 	enum states state = top;
 	int changedState = 0;
-	while (1) {
+	while (mainRunning) {
 		switch (state)
 		{
 		case top:
@@ -413,6 +421,13 @@ int main(int argc, char **argv) {
 		}
 		delay(1);
 	}
-	
+	args.running = 0;
+	if (pthread_join(appThread, NULL)) {
+
+		fprintf(stderr, "Error joining thread.\n");
+		return 2;
+	}
+	UnloadSharedLib(appLibaryHandle);
+	printf("\nExiting...\n");
 	return 0;
 }
